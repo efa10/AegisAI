@@ -1,0 +1,21 @@
+{
+  "model": "Linear SVM",
+  "dataset": "test",
+  "model_name": "linear_svm",
+  "accuracy": 0.97532,
+  "precision": 0.92222,
+  "recall": 0.87368,
+  "f1": 0.8973,
+  "confusion_matrix": [
+    [
+      668,
+      7
+    ],
+    [
+      12,
+      83
+    ]
+  ],
+  "inference_latency_ms_per_sample": 0.01367,
+  "total_inference_time_seconds": 0.0105
+}

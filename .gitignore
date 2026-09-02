@@ -1,0 +1,60 @@
+# ========================
+# Python
+# ========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# ========================
+# ML / Data Science
+# ========================
+# Datasets (raw and processed)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Trained model artifacts
+models/*.joblib
+models/*.pkl
+models/*.pickle
+models/*.h5
+models/*.json
+!models/README.md
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# ========================
+# IDE / Editors
+# ========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ========================
+# OS
+# ========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ========================
+# Misc
+# ========================
+*.log
+*.tmp
+.cache/
