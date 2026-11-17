@@ -1,21 +1,21 @@
 {
-  "model": "Random Forest",
+  "model": "XGBoost",
   "dataset": "test",
-  "model_name": "random_forest",
-  "accuracy": 0.9209,
-  "precision": 0.98333,
-  "recall": 0.93102,
-  "f1": 0.95646,
+  "model_name": "xgboost",
+  "accuracy": 0.85656,
+  "precision": 0.85482,
+  "recall": 0.85881,
+  "f1": 0.85681,
   "confusion_matrix": [
     [
-      668,
-      189
+      733,
+      125
     ],
     [
-      826,
-      11149
+      121,
+      736
     ]
   ],
-  "inference_latency_ms_per_sample": 0.00835,
-  "total_inference_time_seconds": 0.1072
+  "inference_latency_ms_per_sample": 0.00669,
+  "total_inference_time_seconds": 0.0115
 }

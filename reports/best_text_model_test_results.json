@@ -2,20 +2,20 @@
   "model": "Linear SVM",
   "dataset": "test",
   "model_name": "linear_svm",
-  "accuracy": 0.97532,
-  "precision": 0.92222,
+  "accuracy": 0.97662,
+  "precision": 0.93258,
   "recall": 0.87368,
-  "f1": 0.8973,
+  "f1": 0.90217,
   "confusion_matrix": [
     [
-      668,
-      7
+      669,
+      6
     ],
     [
       12,
       83
     ]
   ],
-  "inference_latency_ms_per_sample": 0.01367,
-  "total_inference_time_seconds": 0.0105
+  "inference_latency_ms_per_sample": 0.01976,
+  "total_inference_time_seconds": 0.0152
 }

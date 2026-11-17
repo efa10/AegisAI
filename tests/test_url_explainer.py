@@ -135,3 +135,30 @@ def test_explain_url_missing_model(mock_classifier, mock_predict_url):
     
     assert result["prediction"] == "error"
     assert "Model failed to load" in result["error"]
+
+
+@patch("src.explainability.url_explainer.predict_url")
+@patch("src.explainability.url_explainer.get_url_classifier")
+@patch("src.explainability.url_explainer.shap")
+def test_explain_url_fallback_when_cached_classifier_is_none(mock_shap, mock_get_clf, mock_predict_url):
+    """Test that explain_url dynamically retrieves classifier when _cached_classifier is None."""
+    import src.explainability.url_explainer as exp_mod
+    exp_mod._cached_classifier = None
+    
+    mock_predict_url.return_value = {
+        "verdict": "phishing",
+        "phishing_probability": 0.95,
+        "features": {feat: 0 for feat in ["url_length", "has_ip_address"]}
+    }
+    
+    mock_clf = MagicMock()
+    mock_clf.model = MagicMock()
+    mock_get_clf.return_value = mock_clf
+    
+    mock_explainer = MagicMock()
+    mock_explainer.shap_values.return_value = [[], [[0.1] * 17]]
+    mock_shap.TreeExplainer.return_value = mock_explainer
+    
+    res = explain_url("http://phish.com")
+    assert res["prediction"] == "PHISHING"
+    mock_get_clf.assert_called_once()

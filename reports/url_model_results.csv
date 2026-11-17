@@ -1,5 +1,5 @@
 model,accuracy,precision,recall,f1,training_time_s,latency_ms_per_sample,confusion_matrix,imbalance_strategy
-Random Forest,0.92425,0.9851,0.93294,0.95831,1.934,0.00932,"[[689, 169], [803, 11171]]",class_weight='balanced' (built-in)
-Naive Bayes,0.26504,0.9961,0.21321,0.35124,0.031,0.00035,"[[848, 10], [9421, 2553]]",sample_weight (computed from class frequencies)
-SVM,0.06686,0.0,0.0,0.0,82.073,0.30131,"[[858, 0], [11974, 0]]",class_weight='balanced' (built-in)
-XGBoost,0.89339,0.99275,0.89227,0.93983,0.773,0.00153,"[[780, 78], [1290, 10684]]",scale_pos_weight (auto-computed from class ratio)
+Random Forest,0.84656,0.85442,0.83547,0.84484,0.638,0.03571,"[[735, 122], [141, 716]]",class_weight='balanced'
+Naive Bayes,0.65286,0.97122,0.31505,0.47577,0.006,0.00075,"[[849, 8], [587, 270]]",sample_weight
+SVM,0.74854,0.79501,0.66978,0.72704,11.012,0.52694,"[[709, 148], [283, 574]]",class_weight='balanced'
+XGBoost,0.85414,0.8626,0.84247,0.85242,0.719,0.00732,"[[742, 115], [135, 722]]",scale_pos_weight

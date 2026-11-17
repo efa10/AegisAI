@@ -106,7 +106,17 @@ def process_qr(
             "is_url": True,
             "verdict": url_prediction["verdict"],
             "score": url_prediction["phishing_probability"],
-            "risk_indicators": indicators
+            "confidence": url_prediction.get("confidence"),
+            "risk_score": url_prediction.get("risk_score"),
+            "is_shortened": url_prediction.get("is_shortened", False),
+            "shortening_service": url_prediction.get("shortening_service"),
+            "expanded_url": url_prediction.get("expanded_url", payload),
+            "redirect_chain": url_prediction.get("redirect_chain", [payload]),
+            "redirect_count": url_prediction.get("redirect_count", 0),
+            "expansion_success": url_prediction.get("expansion_success", False),
+            "expansion_error": url_prediction.get("expansion_error"),
+            "risk_indicators": url_prediction.get("risk_indicators", indicators),
+            "threat_intelligence": url_prediction.get("threat_intelligence"),
         }
     else:
         # 4. Handle non-URL text payloads

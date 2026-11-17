@@ -1,82 +1,46 @@
 [
   {
     "model": "Random Forest",
-    "accuracy": 0.92425,
-    "precision": 0.9851,
-    "recall": 0.93294,
-    "f1": 0.95831,
-    "training_time_s": 1.934,
-    "latency_ms_per_sample": 0.00932,
-    "confusion_matrix": [
-      [
-        689,
-        169
-      ],
-      [
-        803,
-        11171
-      ]
-    ],
-    "imbalance_strategy": "class_weight='balanced' (built-in)"
+    "accuracy": 0.84656,
+    "precision": 0.85442,
+    "recall": 0.83547,
+    "f1": 0.84484,
+    "training_time_s": 0.638,
+    "latency_ms_per_sample": 0.03571,
+    "confusion_matrix": "[[735, 122], [141, 716]]",
+    "imbalance_strategy": "class_weight='balanced'"
   },
   {
     "model": "Naive Bayes",
-    "accuracy": 0.26504,
-    "precision": 0.9961,
-    "recall": 0.21321,
-    "f1": 0.35124,
-    "training_time_s": 0.031,
-    "latency_ms_per_sample": 0.00035,
-    "confusion_matrix": [
-      [
-        848,
-        10
-      ],
-      [
-        9421,
-        2553
-      ]
-    ],
-    "imbalance_strategy": "sample_weight (computed from class frequencies)"
+    "accuracy": 0.65286,
+    "precision": 0.97122,
+    "recall": 0.31505,
+    "f1": 0.47577,
+    "training_time_s": 0.006,
+    "latency_ms_per_sample": 0.00075,
+    "confusion_matrix": "[[849, 8], [587, 270]]",
+    "imbalance_strategy": "sample_weight"
   },
   {
     "model": "SVM",
-    "accuracy": 0.06686,
-    "precision": 0.0,
-    "recall": 0.0,
-    "f1": 0.0,
-    "training_time_s": 82.073,
-    "latency_ms_per_sample": 0.30131,
-    "confusion_matrix": [
-      [
-        858,
-        0
-      ],
-      [
-        11974,
-        0
-      ]
-    ],
-    "imbalance_strategy": "class_weight='balanced' (built-in)"
+    "accuracy": 0.74854,
+    "precision": 0.79501,
+    "recall": 0.66978,
+    "f1": 0.72704,
+    "training_time_s": 11.012,
+    "latency_ms_per_sample": 0.52694,
+    "confusion_matrix": "[[709, 148], [283, 574]]",
+    "imbalance_strategy": "class_weight='balanced'"
   },
   {
     "model": "XGBoost",
-    "accuracy": 0.89339,
-    "precision": 0.99275,
-    "recall": 0.89227,
-    "f1": 0.93983,
-    "training_time_s": 0.773,
-    "latency_ms_per_sample": 0.00153,
-    "confusion_matrix": [
-      [
-        780,
-        78
-      ],
-      [
-        1290,
-        10684
-      ]
-    ],
-    "imbalance_strategy": "scale_pos_weight (auto-computed from class ratio)"
+    "accuracy": 0.85414,
+    "precision": 0.8626,
+    "recall": 0.84247,
+    "f1": 0.85242,
+    "training_time_s": 0.719,
+    "latency_ms_per_sample": 0.00732,
+    "confusion_matrix": "[[742, 115], [135, 722]]",
+    "imbalance_strategy": "scale_pos_weight"
   }
 ]

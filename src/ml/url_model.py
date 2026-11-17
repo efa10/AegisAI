@@ -69,7 +69,9 @@ def _create_model(
     if name == "random_forest":
         return RandomForestClassifier(
             n_estimators=200,
-            max_depth=20,
+            max_depth=16,
+            min_samples_split=6,
+            min_samples_leaf=2,
             random_state=random_state,
             class_weight=class_weight or "balanced",
             n_jobs=-1,
@@ -243,6 +245,37 @@ _cached_classifier: URLClassifier | None = None
 _cached_model_path: Path | None = None
 
 
+def get_url_classifier(model_path: Path | None = None) -> URLClassifier:
+    """Retrieve or load the cached URLClassifier instance.
+
+    Parameters
+    ----------
+    model_path : Path | None
+        Path to a saved model. Defaults to models/best_url_model.joblib.
+
+    Returns
+    -------
+    URLClassifier
+        The cached and loaded URLClassifier instance.
+    """
+    global _cached_classifier, _cached_model_path
+
+    if model_path is None:
+        model_path = SETTINGS.MODELS_DIR / "best_url_model.joblib"
+
+    if not model_path.exists():
+        raise FileNotFoundError(
+            f"No trained model found at {model_path}. Train a model first."
+        )
+
+    if _cached_classifier is None or _cached_model_path != model_path:
+        _cached_classifier = URLClassifier()
+        _cached_classifier.load_model(model_path)
+        _cached_model_path = model_path
+
+    return _cached_classifier
+
+
 def predict_url(url: str, model_path: Path | None = None) -> dict[str, Any]:
     """Predict whether a URL is phishing.
 
@@ -258,37 +291,48 @@ def predict_url(url: str, model_path: Path | None = None) -> dict[str, Any]:
     dict
         verdict, probability, features, model_name
     """
-    global _cached_classifier, _cached_model_path
-
-    if model_path is None:
-        model_path = SETTINGS.MODELS_DIR / "best_url_model.joblib"
-
-    if not model_path.exists():
-        raise FileNotFoundError(
-            f"No trained model found at {model_path}. Train a model first."
-        )
-
-    # Load model (with caching)
-    if _cached_classifier is None or _cached_model_path != model_path:
-        _cached_classifier = URLClassifier()
-        _cached_classifier.load_model(model_path)
-        _cached_model_path = model_path
-
-    clf = _cached_classifier
+    clf = get_url_classifier(model_path)
 
     # Validate input
     if not isinstance(url, str) or not url.strip():
         return {
+            "original_url": url,
             "url": url,
+            "is_shortened": False,
+            "shortening_service": None,
+            "shortener_service": None,
+            "expanded_url": url,
+            "redirect_chain": [url] if url else [],
+            "redirect_count": 0,
+            "expansion_success": False,
+            "expansion_error": "Empty or invalid URL provided.",
+            "error": "Empty or invalid URL provided.",
+            "ml_verdict": "invalid",
             "verdict": "invalid",
-            "probability": None,
+            "label": -1,
+            "phishing_probability": None,
+            "confidence": None,
+            "risk_score": None,
+            "risk_indicators": ["Empty or invalid URL format."],
+            "threat_intelligence": {
+                "overall_verdict": "unknown",
+                "virustotal": {"status": "not_configured", "verdict": "unknown"},
+                "urlhaus": {"status": "not_configured", "verdict": "unknown"},
+                "phishtank": {"status": "not_configured", "verdict": "unknown"},
+            },
             "features": {},
             "model_name": clf.model_name,
-            "error": "Empty or invalid URL provided.",
         }
 
+    from src.preprocessing.url_expansion import expand_url, normalize_url
+    from src.threat_intel.threat_intel import check_threat_intelligence
+
+    # Expand shortened URLs safely (with SSRF protection)
+    expansion_result = expand_url(url)
+    target_url = expansion_result.get("expanded_url") or normalize_url(url)
+
     # Extract features
-    features = extract_url_features(url)
+    features = extract_url_features(target_url)
     feature_df = pd.DataFrame([features])
 
     # Predict
@@ -300,11 +344,66 @@ def predict_url(url: str, model_path: Path | None = None) -> dict[str, Any]:
 
     verdict = "phishing" if prediction == SETTINGS.LABEL_PHISHING else "legitimate"
 
+    # Correct confidence semantics:
+    # If verdict is phishing: confidence that it is phishing = proba
+    # If verdict is legitimate: confidence that it is legitimate = 1.0 - proba
+    if proba is not None:
+        confidence = round(proba if verdict == "phishing" else (1.0 - proba), 5)
+        risk_score = round(proba * 100, 1)
+    else:
+        confidence = 1.0
+        risk_score = 100.0 if verdict == "phishing" else 0.0
+
+    # Risk indicators
+    indicators: list[str] = []
+    if expansion_result.get("is_shortened"):
+        svc = expansion_result.get("shortening_service", "Unknown")
+        if expansion_result.get("expansion_success"):
+            indicators.append(f"Shortened URL detected via {svc} (resolved to target destination)")
+        else:
+            indicators.append(f"Shortened URL via {svc} (expansion failed: {expansion_result.get('expansion_error')})")
+
+    if features.get("has_ip_address") == 1:
+        indicators.append("Host uses direct IP address instead of domain name")
+    if features.get("has_at_symbol") == 1:
+        indicators.append("Contains '@' symbol (often used to obscure target hostname)")
+    if features.get("num_subdomains", 0) > 2:
+        indicators.append(f"High subdomain count ({features.get('num_subdomains')} subdomains)")
+    if features.get("url_length", 0) > 85:
+        indicators.append(f"Abnormally long URL ({features.get('url_length')} characters)")
+    if features.get("url_entropy", 0) > 4.8:
+        indicators.append("Elevated character entropy/randomness in URL structure")
+    if features.get("num_digits", 0) > 8:
+        indicators.append(f"High numeric character concentration ({features.get('num_digits')} digits)")
+
+    # Query threat intelligence feeds non-blockingly
+    threat_intel = check_threat_intelligence(target_url)
+    if threat_intel.get("overall_verdict") == "malicious":
+        indicators.insert(0, "Flagged as malicious by external threat intelligence database")
+        # Elevate risk score if threat intel confirmed active threat
+        risk_score = max(risk_score, 95.0)
+
     return {
+        "original_url": url,
+        "is_shortened": expansion_result["is_shortened"],
+        "shortening_service": expansion_result["shortening_service"],
+        "expanded_url": target_url,
+        "redirect_chain": expansion_result["redirect_chain"],
+        "redirect_count": expansion_result["redirect_count"],
+        "expansion_success": expansion_result["expansion_success"],
+        "expansion_error": expansion_result["expansion_error"],
+        "ml_verdict": verdict,
+        "phishing_probability": proba,
+        "confidence": confidence,
+        "risk_score": risk_score,
+        "risk_indicators": indicators,
+        "threat_intelligence": threat_intel,
+        # Backward-compatible fields
         "url": url,
+        "shortener_service": expansion_result["shortening_service"],
+        "error": expansion_result["expansion_error"],
         "verdict": verdict,
         "label": int(prediction),
-        "phishing_probability": proba,
         "features": features,
         "model_name": clf.model_name,
     }

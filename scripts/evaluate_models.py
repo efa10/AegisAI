@@ -9,6 +9,9 @@ import sys
 import pandas as pd
 from pathlib import Path
 
+# Ensure project root is on path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from config.settings import SETTINGS
 from src.ml.url_model import URLClassifier
 from src.ml.text_model import TextClassifier

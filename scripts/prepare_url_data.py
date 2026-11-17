@@ -161,6 +161,28 @@ def prepare_url_datasets() -> None:
     legitimate_count = (combined_df["label"] == SETTINGS.LABEL_LEGITIMATE).sum()
     phishing_count = (combined_df["label"] == SETTINGS.LABEL_PHISHING).sum()
 
+    # 5. Balance classes to prevent severe artificial skew and feature correlation inversion
+    if legitimate_count > 0 and phishing_count > legitimate_count:
+        print(f"[INFO] Balancing classes to avoid artificial skew: matching phishing to legitimate ({legitimate_count} each)...")
+        legit_df = combined_df[combined_df["label"] == SETTINGS.LABEL_LEGITIMATE]
+        phish_df = combined_df[combined_df["label"] == SETTINGS.LABEL_PHISHING]
+        # Prioritize matching phishing from same source as legitimate if available
+        same_source_phish = phish_df[phish_df["source"].isin(legit_df["source"].unique())]
+        if len(same_source_phish) >= len(legit_df):
+            phish_sampled = same_source_phish.sample(n=len(legit_df), random_state=SETTINGS.RANDOM_STATE)
+        else:
+            remaining = len(legit_df) - len(same_source_phish)
+            other_phish = phish_df[~phish_df.index.isin(same_source_phish.index)]
+            other_sampled = other_phish.sample(n=min(remaining, len(other_phish)), random_state=SETTINGS.RANDOM_STATE)
+            phish_sampled = pd.concat([same_source_phish, other_sampled])
+        
+        combined_df = pd.concat([legit_df, phish_sampled], ignore_index=True).sample(
+            frac=1.0, random_state=SETTINGS.RANDOM_STATE
+        ).reset_index(drop=True)
+        final_rows = len(combined_df)
+        legitimate_count = (combined_df["label"] == SETTINGS.LABEL_LEGITIMATE).sum()
+        phishing_count = (combined_df["label"] == SETTINGS.LABEL_PHISHING).sum()
+
     # Print summary
     print("\n" + "=" * 50)
     print("URL DATASET SUMMARY")

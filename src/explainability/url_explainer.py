@@ -25,7 +25,12 @@ except ImportError:
     _SHAP_AVAILABLE = False
 
 from config.settings import SETTINGS
-from src.ml.url_model import predict_url, _cached_classifier, _cached_model_path
+from src.ml import url_model
+from src.ml.url_model import predict_url, get_url_classifier
+
+# Module-level references kept for test mock patching compatibility
+_cached_classifier = None
+_cached_model_path = None
 
 
 # ---------------------------------------------------------------------------
@@ -56,6 +61,7 @@ FEATURE_DESCRIPTIONS = {
 # Module-level cache for SHAP explainer to avoid recalculating base values
 _cached_explainer: Any = None
 _cached_explainer_model_path: Path | None = None
+_cached_model_id: int | None = None
 
 
 def explain_url(url: str, model_path: Path | None = None) -> dict[str, Any]:
@@ -74,7 +80,7 @@ def explain_url(url: str, model_path: Path | None = None) -> dict[str, Any]:
         A dictionary containing the prediction, confidence, top features,
         their SHAP contributions, and human-readable reasons.
     """
-    global _cached_explainer, _cached_explainer_model_path
+    global _cached_explainer, _cached_explainer_model_path, _cached_model_id
 
     if not _SHAP_AVAILABLE:
         return {
@@ -100,8 +106,17 @@ def explain_url(url: str, model_path: Path | None = None) -> dict[str, Any]:
     X_single = pd.DataFrame([features_dict], columns=feature_names)
     
     # 2. Get the trained model instance from the url_model module cache
-    # (predict_url ensures the model is loaded)
-    model = _cached_classifier.model
+    # Check if _cached_classifier was explicitly patched / set (e.g. in unit tests)
+    clf = _cached_classifier
+    if clf is None:
+        clf = getattr(url_model, "_cached_classifier", None)
+    if clf is None:
+        try:
+            clf = get_url_classifier(model_path)
+        except Exception:
+            clf = None
+
+    model = getattr(clf, "model", None) if clf is not None else None
     if model is None:
         return {
             "prediction": "error",
@@ -110,10 +125,15 @@ def explain_url(url: str, model_path: Path | None = None) -> dict[str, Any]:
 
     # 3. Initialize SHAP Explainer (cached for performance)
     current_model_path = model_path or SETTINGS.MODELS_DIR / "best_url_model.joblib"
-    if _cached_explainer is None or _cached_explainer_model_path != current_model_path:
+    if (
+        _cached_explainer is None
+        or _cached_explainer_model_path != current_model_path
+        or _cached_model_id != id(model)
+    ):
         # Use TreeExplainer for Random Forest / XGBoost, which are our primary models.
         _cached_explainer = shap.TreeExplainer(model)
         _cached_explainer_model_path = current_model_path
+        _cached_model_id = id(model)
 
     # 4. Calculate SHAP values
     shap_values = _cached_explainer.shap_values(X_single)
@@ -144,7 +164,11 @@ def explain_url(url: str, model_path: Path | None = None) -> dict[str, Any]:
     positive_contributors = [(feat, val) for feat, val in feature_contributions if val > 0]
     positive_contributors.sort(key=lambda x: x[1], reverse=True)
     
-    top_features = positive_contributors[:SETTINGS.SHAP_MAX_DISPLAY_FEATURES]
+    if positive_contributors:
+        top_features = positive_contributors[:SETTINGS.SHAP_MAX_DISPLAY_FEATURES]
+    else:
+        sorted_by_mag = sorted(feature_contributions, key=lambda x: abs(x[1]), reverse=True)
+        top_features = sorted_by_mag[:SETTINGS.SHAP_MAX_DISPLAY_FEATURES]
     
     # 6. Generate human-readable reasons
     reasons = []
@@ -162,7 +186,8 @@ def explain_url(url: str, model_path: Path | None = None) -> dict[str, Any]:
 
     return {
         "prediction": verdict.upper(),
-        "confidence": score if score is not None else 1.0,
+        "confidence": prediction_result.get("confidence", score if score is not None else 1.0),
+        "phishing_probability": score,
         "top_features": [f[0] for f in top_features],
         "feature_contributions": {f[0]: round(float(f[1]), 5) for f in top_features},
         "reasons": reasons

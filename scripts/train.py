@@ -210,17 +210,54 @@ def train_url_pipeline():
         except Exception as e:
             print(f"[ERROR] Failed to train {display}: {e}")
 
+    comparison_rows = []
+    for r in all_results:
+        m = r["metrics"]
+        comparison_rows.append({
+            "model": m["display_name"],
+            "accuracy": m["accuracy"],
+            "precision": m["precision"],
+            "recall": m["recall"],
+            "f1": m["f1"],
+            "training_time_s": m["training_time_seconds"],
+            "latency_ms_per_sample": m["inference_latency_ms_per_sample"],
+            "confusion_matrix": str(m["confusion_matrix"]),
+            "imbalance_strategy": m["imbalance_strategy"]
+        })
+    comp_df = pd.DataFrame(comparison_rows)
+    comp_df.to_csv(reports_dir / "url_model_results.csv", index=False)
+    with open(reports_dir / "url_model_results.json", "w") as f:
+        json.dump(comparison_rows, f, indent=2)
+
     # Select best model (by F1 score)
     best = max(all_results, key=lambda r: r["metrics"]["f1"])
     best_name = best["metrics"]["display_name"]
     best_clf = best["classifier"]
 
-    print(f"\n[INFO] BEST URL MODEL: {best_name} (F1: {best['metrics']['f1']})")
-    
+    print(f"\n{'=' * 60}")
+    print(f"BEST URL MODEL: {best_name}")
+    print(f"{'=' * 60}")
+    print(f"  F1:        {best['metrics']['f1']}")
+
+    # Final evaluation on TEST set
+    test_metrics = best_clf.evaluate(X_test, y_test)
+    print(f"\nFINAL TEST SET EVALUATION")
+    print(f"  Accuracy:  {test_metrics['accuracy']}")
+    print(f"  Precision: {test_metrics['precision']}")
+    print(f"  Recall:    {test_metrics['recall']}")
+    print(f"  F1:        {test_metrics['f1']}")
+    print(f"  Confusion Matrix: {test_metrics['confusion_matrix']}")
+
+    generate_confusion_matrix_plot(np.array(test_metrics["confusion_matrix"]), f"{best_name} (Test)", reports_dir, prefix="url_")
+
+    test_results = {"model": best_name, "dataset": "test", **test_metrics}
+    with open(reports_dir / "best_model_test_results.json", "w") as f:
+        json.dump(test_results, f, indent=2)
+
     # Save the best model
     model_path = SETTINGS.MODELS_DIR / "best_url_model.joblib"
     best_clf.save_model(model_path)
-    print(f"[INFO] Best model saved to: {model_path}")
+    print(f"\n[INFO] Best url model saved to: {model_path}")
 
 
 # ---------------------------------------------------------------------------

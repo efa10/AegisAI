@@ -284,11 +284,16 @@ def predict_text(text: str, model_path: Path | None = None) -> dict[str, Any]:
 
     verdict = "phishing" if prediction == SETTINGS.LABEL_PHISHING else "legitimate"
 
+    confidence = None
+    if proba is not None:
+        confidence = round(proba if verdict == "phishing" else (1.0 - proba), 5)
+
     return {
         "text": text,
         "verdict": verdict,
         "label": int(prediction),
         "phishing_probability": proba,
+        "confidence": confidence,
         "cleaned_text": cleaned,
         "model_name": clf.model_name,
     }

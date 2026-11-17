@@ -32,6 +32,20 @@ class _Settings:
     # If label_column is None, a fixed_label must be provided.
     RAW_URL_DATASET_CONFIGS: list[dict] = [
         {
+            "filename": "dataset_phishing.csv",       # Kaggle — both phishing and legitimate (balanced)
+            "url_col": "url",
+            "label_col": "status",
+            "fixed_label": None,
+            "label_map": {"legitimate": 0, "phishing": 1},
+        },
+        {
+            "filename": "kaggle_phishing_urls.csv",   # Alternative Kaggle filename
+            "url_col": "url",
+            "label_col": "label",
+            "fixed_label": None,
+            "label_map": None,                        # Assumes numeric 0/1
+        },
+        {
             "filename": "verified_online.csv",       # PhishTank
             "url_col": "url",
             "label_col": None,                       # No label column — all rows are phishing
@@ -44,20 +58,6 @@ class _Settings:
             "label_col": None,
             "fixed_label": 1,
             "label_map": None,
-        },
-        {
-            "filename": "dataset_phishing.csv",       # Kaggle — both phishing and legitimate
-            "url_col": "url",
-            "label_col": "status",
-            "fixed_label": None,
-            "label_map": {"legitimate": 0, "phishing": 1},
-        },
-        {
-            "filename": "kaggle_phishing_urls.csv",   # Alternative Kaggle filename
-            "url_col": "url",
-            "label_col": "label",
-            "fixed_label": None,
-            "label_map": None,                        # Assumes numeric 0/1
         },
     ]
     # --- Raw Text Dataset Expected Filenames and Column Mappings ---

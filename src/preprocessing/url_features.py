@@ -47,11 +47,10 @@ def extract_url_features(url: str) -> dict[str, float | int]:
         url = str(url)
     
     # Pre-parse URL
-    # Add scheme if missing to help urlparse
-    if not url.startswith(('http://', 'https://', 'ftp://')):
-        parsed_url = urlparse('http://' + url)
-    else:
-        parsed_url = urlparse(url)
+    # Add scheme if missing to help urlparse and align with training distribution
+    if url.strip() and not url.startswith(('http://', 'https://', 'ftp://')):
+        url = 'http://' + url
+    parsed_url = urlparse(url)
 
     hostname = parsed_url.hostname or ""
     path = parsed_url.path or ""
